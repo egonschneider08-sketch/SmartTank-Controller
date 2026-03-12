@@ -9,16 +9,15 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 // Sensores de nível
 const int sensorNivel[5] = {6,7,8,9,10};
 
-// Altura correspondente em cm
+// Altura em cm
 const int alturaNivel[5] = {2,4,6,8,9};
 
-// Sensor de vazão
+// Sensor de vazão (potenciômetro)
 const int sensorVazao = A0;
 
-// Relé da bomba
-const int bomba = 13;
+// LED que representa a bomba
+const int ledSistema = 13;
 
-// Variáveis do sistema
 int alturaAtual = 0;
 unsigned long consumoTotal = 0;
 
@@ -31,9 +30,8 @@ void setup()
     pinMode(sensorNivel[i], INPUT);
   }
 
-  pinMode(bomba, OUTPUT);
+  pinMode(ledSistema, OUTPUT);
 
-  // Recupera consumo salvo
   EEPROM.get(0, consumoTotal);
 
   lcd.print("Sistema Agua");
@@ -44,14 +42,12 @@ void setup()
 void loop()
 {
   lerNivel();
-  controlarBomba();
+  controlarSistema();
   calcularConsumo();
   mostrarLCD();
 
   delay(500);
 }
-
-// -------------------------
 
 void lerNivel()
 {
@@ -65,21 +61,17 @@ void lerNivel()
   }
 }
 
-// -------------------------
-
-void controlarBomba()
+void controlarSistema()
 {
   if(alturaAtual <= 4)
   {
-    digitalWrite(bomba, HIGH);
+    digitalWrite(ledSistema, HIGH); // reservatorio enchendo
   }
   else if(alturaAtual >= 9)
   {
-    digitalWrite(bomba, LOW);
+    digitalWrite(ledSistema, LOW); // reservatorio cheio
   }
 }
-
-// -------------------------
 
 void calcularConsumo()
 {
@@ -92,8 +84,6 @@ void calcularConsumo()
   EEPROM.put(0, consumoTotal);
 }
 
-// -------------------------
-
 void mostrarLCD()
 {
   lcd.setCursor(0,0);
@@ -102,8 +92,7 @@ void mostrarLCD()
   lcd.print("cm   ");
 
   lcd.setCursor(0,1);
-
   lcd.print("Cons:");
   lcd.print(consumoTotal);
-  lcd.print(" L   ");
+  lcd.print("L    ");
 }
