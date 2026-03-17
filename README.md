@@ -1,79 +1,54 @@
-Sistema de Monitoramento de Nível de Água com Arduino
+💧 Controle Inteligente de Caixa D'água (SmartTank Controller)
 
-Descrição
+Este projeto é um sistema automatizado baseado em Arduino desenvolvido para monitorar o nível de uma caixa d'água, calcular o consumo de fluido e controlar automaticamente o acionamento de uma bomba e de uma válvula de passagem. O projeto conta com salvamento de dados na memória permanente (EEPROM) e interface visual completa.
 
-Este projeto apresenta um sistema embarcado para monitoramento do nível de água em um reservatório utilizando Arduino. O sistema lê sensores de nível simulados e mostra as informações em um display LCD.
+Componentes Usados
 
-O consumo de água também é monitorado através de um sensor de vazão simulado por um potenciômetro.
+Para montar este projeto fisicamente, você precisará dos seguintes hardwares:
 
-Como não há disponibilidade de um relé ou bomba real, o funcionamento do sistema de enchimento do reservatório é representado por um LED indicador.
+1x Placa Arduino (Uno, Nano ou Mega).
+1x Potenciômetro de 10kΩ (Utilizado para simular a variação do sensor de nível da água).
+1x Display LCD 16x2 com Módulo I2C (Facilita a ligação usando apenas 4 fios).
+1x Micro Servo Motor (Ex: SG90, atuando como a válvula de passagem de água).
+1x Motor CC (Pode ser simulada por um LED no seu protótipo caso se interrese pelo nosso projeto).
+1x Transistor (TIP-120) (Necessário para acionar o Motor CC de forma segura).
+5x LEDs (Para a barra gráfica indicadora de nível).
+5x Resistores de 220Ω ou 330Ω (Para proteger os LEDs).
+Protoboard e Jumpers (Para as conexões).
 
-Funcionamento do Sistema
+🔌 Esquema de Ligações (Pinout)
 
-O sistema mede o nível da água através de cinco sensores simulados por chaves liga/desliga.
+| Componente | Pino do Arduino | Função no Sistema |
+| Potenciômetro | `A0` | Simula a leitura do nível da água (0 a 1023). |
+| Motor CC | `D9` | Aciona a bomba de enchimento. |
+| Servo Motor | `D10` | Abre ou fecha a válvula de passagem. |
+| LED 1 | `D2` | Acende quando o nível atinge 10%. |
+| LED 2 | `D3` | Acende quando o nível atinge 30%. |
+| LED 3 | `D4` | Acende quando o nível atinge 50%. |
+| LED 4 | `D5` | Acende quando o nível atinge 70%. |
+| LED 5 | `D6` | Acende quando o nível atinge 90%. |
+| Display LCD (SDA)| `A4` (ou pino SDA padrão) | Via de dados do barramento I2C. |
+| Display LCD (SCL)| `A5` (ou pino SCL padrão) | Via de clock do barramento I2C. |
 
-Dependendo da altura detectada:
+⚙️ Como o Código Funciona
 
-Se o nível estiver baixo, o sistema liga um LED indicando que o reservatório está sendo preenchido.
+O código foi construído utilizando lógicas de não-bloqueio (usando `millis()` em vez de `delay()`) para garantir que o sistema responda rapidamente enquanto atualiza telas e salva dados. 
 
-Quando o nível máximo é atingido, o LED é desligado indicando que o reservatório está cheio.
+Aqui está o passo a passo da lógica do sistema:
 
-As informações de nível e consumo são exibidas em um display LCD 16x2.
+1. Leitura do Nível de Água:** O sistema lê continuamente o valor do pino `A0` (onde está o potenciômetro). A função `map()` converte a leitura crua (que vai de 0 a 1023) em uma porcentagem fácil de entender (0 a 100%).
+2. Automação da Bomba e Válvula:** O controle funciona com uma lógica de limites. Se o nível da água cair para 10% ou menos, o sistema liga o pino `D9` (bomba) e move o servo motor para 90 graus (simulando a abertura de uma válvula). Quando o nível atinge 90% ou mais, a bomba é desligada e o servo volta para 0 graus (válvula fechada).
+3. Indicadores Visuais (LEDs): Os 5 LEDs funcionam como uma barra de progresso. O Arduino verifica o nível atual da água e envia um sinal `HIGH` apenas para os LEDs cujos níveis já foram atingidos (10%, 30%, 50%, 70% e 90%).
+4. Cálculo de Consumo:** O algoritmo compara o nível atual com o nível medido na rodada anterior. Se o nível atual for maior (indicando que a caixa encheu ou que houve fluxo de água), ele calcula a diferença, multiplica por um fator (neste caso, 100) e soma isso à variável de consumo total.
+5. Interface do Display LCD: Usando a função `millis()`, o código cria um temporizador que alterna o conteúdo da tela do LCD a cada 2 segundos:
+   Tela 0: Exibe o Nível atual em porcentagem e o status da Bomba ("Ligado" ou "Desligado").
+   Tela 1: Exibe o Consumo Total acumulado em Litros.
+6. Memória Permanente (EEPROM): Para evitar que o consumo total zere caso falte energia, o sistema salva o valor na memória EEPROM. Para não desgastar a memória do Arduino (que tem um limite de gravações), o salvamento só ocorre a cada 5 segundos e apenas se o valor de consumo tiver sido alterado. Ao religar o Arduino, a função `setup()` lê esse endereço da memória e recupera o último valor salvo.
 
-O consumo total de água é armazenado na memória EEPROM do Arduino para evitar perda de dados caso o sistema seja desligado.
+📚 Dependências
 
-Níveis do Reservatório
+Para que o código compile corretamente na IDE do Arduino, instale a seguinte biblioteca através do Gerenciador de Bibliotecas:
 
-Sensor 1 – 2 cm
-Sensor 2 – 4 cm
-Sensor 3 – 6 cm
-Sensor 4 – 8 cm
-Sensor 5 – 9 cm
+`LiquidCrystal_I2C` (Desenvolvida por Frank de Brabander).
 
-Lógica de Funcionamento
-
-Altura menor ou igual a 4 cm
-Reservatório baixo – LED ligado indicando enchimento.
-
-Altura entre 6 cm e 8 cm
-Sistema apenas monitora o nível.
-
-Altura maior ou igual a 9 cm
-Reservatório cheio – LED desligado.
-
-Componentes Utilizados
-
-Arduino Uno
-Display LCD 16x2
-2 potenciômetros de 10kΩ
-5 botões ou chaves liga/desliga
-resistores de 10kΩ
-1 LED
-1 resistor de 220Ω
-protoboard
-cabos jumper
-
-Estrutura do Código
-
-O código foi dividido em funções para facilitar a organização:
-
-lerNivel() – realiza a leitura dos sensores de nível.
-
-controlarSistema() – controla o LED que representa o sistema de enchimento.
-
-calcularConsumo() – calcula o consumo de água.
-
-mostrarLCD() – exibe as informações no display.
-
-Exemplo de saída no display
-
-Nivel: 6cm
-Cons: 120L
-
-Simulação
-
-O projeto pode ser testado utilizando o simulador Tinkercad antes da montagem física do circuito.
-
-Objetivo
-
-O objetivo deste projeto é demonstrar conceitos de sistemas embarcados aplicados ao monitoramento de recursos hídricos, utilizando sensores simulados, interface com display e armazenamento de dados em memória não volátil.
+> Nota: As bibliotecas `Wire.h`, `Servo.h` e `EEPROM.h` já são nativas da IDE do Arduino e não precisam de instalação extra.
