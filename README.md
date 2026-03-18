@@ -1,4 +1,4 @@
-💧 Controle Inteligente de Caixa D'água (SmartTank Controller)
+Controle Inteligente de Caixa D'água (SmartTank Controller)
 
 Este projeto é um sistema automatizado baseado em Arduino desenvolvido para monitorar o nível de uma caixa d'água, calcular o consumo de fluido e controlar automaticamente o acionamento de uma bomba e de uma válvula de passagem. O projeto conta com salvamento de dados na memória permanente (EEPROM) e interface visual completa.
 
