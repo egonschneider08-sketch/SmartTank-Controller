@@ -1,10 +1,6 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
-#include <Arduino.h>
-
-int tela = 0;
-unsigned long tempoTroca = 0;
 
 // LCD I2C (endereço comum 0x27)
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -29,11 +25,8 @@ const int bomba = 12;
 const int servoPin = 13;
 
 // Variáveis
-unsigned long nivelAtual = 0;
+int nivelAtual = 0;
 bool bombaLigada = false;
-
-unsigned long nivelAnterior = 0;
-unsigned long consumo = 0;
 
 void setup() {
   // Entradas
@@ -61,36 +54,17 @@ void setup() {
   // Inicial
   digitalWrite(bomba, LOW);
   valvula.write(0); // válvula fechada
-  
-  Serial.begin(9600);
 }
 
 void loop() {
-  // Leitura dos níveis
-  if (digitalRead(nivel90) && digitalRead(nivel70) && digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
-    nivelAtual = 90;
-  }
-  else if (digitalRead(nivel70) && digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
-    nivelAtual = 70;
-  }
-  else if (digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
-    nivelAtual = 50;
-  }
-  else if (digitalRead(nivel30) && digitalRead(nivel10)) {
-    nivelAtual = 30;
-  }
-  else if (digitalRead(nivel10)) {
-    nivelAtual = 10;
-  }
-  else {
-    nivelAtual = 0;}
 
-  // ===== CONSUMO =====
-	if (nivelAtual > nivelAnterior && (consumo == 0 || consumo != 0)) 
-  {    
-    int diferenca = nivelAtual - nivelAnterior;
-    consumo += (diferenca * 100);
-  }
+  // Leitura dos níveis (prioridade do maior)
+  if (digitalRead(nivel90)) nivelAtual = 90;
+  else if (digitalRead(nivel70)) nivelAtual = 70;
+  else if (digitalRead(nivel50)) nivelAtual = 50;
+  else if (digitalRead(nivel30)) nivelAtual = 30;
+  else if (digitalRead(nivel10)) nivelAtual = 10;
+  else nivelAtual = 0;
 
   // LEDs
   digitalWrite(led10, nivelAtual >= 10);
@@ -100,12 +74,9 @@ void loop() {
   digitalWrite(led90, nivelAtual >= 90);
 
   // Controle da bomba e válvula
-  if (nivelAtual = 10) {
+  if (nivelAtual <= 10) {
     bombaLigada = true;
   }
-  
-  if (nivelAtual <10) {
-    bombaLigada = false;
 
   if (nivelAtual >= 90) {
     bombaLigada = false;
@@ -121,56 +92,20 @@ void loop() {
   }
 
   // LCD
-  if (millis() - tempoTroca > 2000) { // troca a cada 2s
-    tela++;
-    if (tela > 1) tela = 0;
-    tempoTroca = millis();
-  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Nivel: ");
+  lcd.print(nivelAtual);
+  lcd.print("%");
 
-  // ===== LCD SEM PISCAR =====
-
-  if (tela == 0) {
-    // Tela 1: Nivel + Bomba
-    lcd.setCursor(0, 0);
-    lcd.print("Nivel: ");
-    lcd.print(nivelAtual);
-    lcd.print("%   "); // limpa sobra
-
-    lcd.setCursor(0, 1);
-    lcd.print("Bomba: ");
-    if (bombaLigada) {
-      lcd.print("Ligada   ");
-    } else {
-      lcd.print("Desligada");
-    }
-
-  } else {
-    // Tela 2: Consumo
-    lcd.setCursor(0, 0);
-    lcd.print("Consumo:      ");
-
-    lcd.setCursor(0, 1);
-    lcd.print(consumo);
-    lcd.print(" L         ");
-  }
-
-  Serial.print("Nivel: ");
-  Serial.print(nivelAtual);
-  Serial.print("% | Bomba: ");
-
+  lcd.setCursor(0, 1);
+  lcd.print("Bomba: ");
   if (bombaLigada) {
-    Serial.print("Ligada");
+    lcd.print("Ligada");
   } else {
-    Serial.print("Desligada");
+    lcd.print("Desligada");
   }
-
-  // ===== CONSUMO NO SERIAL =====
-  Serial.print(" | Consumo Total: ");
-  Serial.print(consumo);
-  Serial.println(" L");
-
-  // Atualiza nível anterior
-  nivelAnterior = nivelAtual;
 
   delay(500);
 }
+
