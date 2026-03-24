@@ -150,4 +150,5 @@ void loop() {
   nivelAnterior = nivelAtual;
 
   delay(500);
+  
 }
