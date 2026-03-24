@@ -1,128 +1,176 @@
-#include <Arduino.h> 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
-#include <EEPROM.h>
+#include <Arduino.h>
 
+int tela = 0;
+unsigned long tempoTroca = 0;
 
+// LCD I2C (endereço comum 0x27)
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 Servo valvula;
 
-// Pinos
-const int potPin = A0;
-const int motorPin = 9;
-const int servoPin = 10;
+// Pinos das chaves
+const int nivel10 = 2;
+const int nivel30 = 3;
+const int nivel50 = 4;
+const int nivel70 = 5;
+const int nivel90 = 6;
 
 // LEDs
-const int led10 = 2;
-const int led30 = 3;
-const int led50 = 4;
-const int led70 = 5;
-const int led90 = 6;
+const int led10 = 7;
+const int led30 = 8;
+const int led50 = 9;
+const int led70 = 10;
+const int led90 = 11;
+
+// Atuadores
+const int bomba = 12;
+const int servoPin = 13;
 
 // Variáveis
-int nivel = 0;
-int nivelAnterior = 0;
-unsigned long consumo = 0;
-unsigned long consumoSalvo = 0;
+unsigned long nivelAtual = 0;
 bool bombaLigada = false;
 
-// Controle de tempo
-unsigned long tempoAnterior = 0;
-unsigned long tempoEEPROM = 0;
-int tela = 0;
-
-// Endereço EEPROM
-const int enderecoEEPROM = 0;
+unsigned long nivelAnterior = 0;
+unsigned long consumo = 0;
 
 void setup() {
-  lcd.init();
-  lcd.backlight();
+  // Entradas
+  pinMode(nivel10, INPUT);
+  pinMode(nivel30, INPUT);
+  pinMode(nivel50, INPUT);
+  pinMode(nivel70, INPUT);
+  pinMode(nivel90, INPUT);
 
-  valvula.attach(servoPin);
-  pinMode(motorPin, OUTPUT);
-
+  // Saídas
   pinMode(led10, OUTPUT);
   pinMode(led30, OUTPUT);
   pinMode(led50, OUTPUT);
   pinMode(led70, OUTPUT);
   pinMode(led90, OUTPUT);
+  pinMode(bomba, OUTPUT);
 
+  // Servo
+  valvula.attach(servoPin);
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
+
+  // Inicial
+  digitalWrite(bomba, LOW);
+  valvula.write(0); // válvula fechada
+  
   Serial.begin(9600);
-
-  // Lê valor salvo
-  EEPROM.get(enderecoEEPROM, consumo);
-
-  // Proteção (caso memória esteja "lixo")
-  if (consumo > 1000000000) {
-    consumo = 0;
-  }
 }
 
 void loop() {
-  int leitura = analogRead(potPin);
-  nivel = map(leitura, 0, 1023, 0, 100);
-
-  // Cálculo de consumo simplificado
-  if (nivel > nivelAnterior) {
-    consumo += (nivel - nivelAnterior) * 100;
+  // Leitura dos níveis
+  if (digitalRead(nivel90) && digitalRead(nivel70) && digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
+    nivelAtual = 90;
   }
-  nivelAnterior = nivel;
+  else if (digitalRead(nivel70) && digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
+    nivelAtual = 70;
+  }
+  else if (digitalRead(nivel50) && digitalRead(nivel30) && digitalRead(nivel10)) {
+    nivelAtual = 50;
+  }
+  else if (digitalRead(nivel30) && digitalRead(nivel10)) {
+    nivelAtual = 30;
+  }
+  else if (digitalRead(nivel10)) {
+    nivelAtual = 10;
+  }
+  else {
+    nivelAtual = 0;}
 
-  // Controle bomba
-  if (nivel <= 10) bombaLigada = true;
-  if (nivel >= 90) bombaLigada = false;
+  // ===== CONSUMO =====
+	if (nivelAtual > nivelAnterior && (consumo == 0 || consumo != 0)) 
+  {    
+    int diferenca = nivelAtual - nivelAnterior;
+    consumo += (diferenca * 100);
+  }
 
-  digitalWrite(motorPin, bombaLigada);
-  valvula.write(bombaLigada ? 90 : 0);
+  // LEDs
+  digitalWrite(led10, nivelAtual >= 10);
+  digitalWrite(led30, nivelAtual >= 30);
+  digitalWrite(led50, nivelAtual >= 50);
+  digitalWrite(led70, nivelAtual >= 70);
+  digitalWrite(led90, nivelAtual >= 90);
 
-  // LEDs de indicação
-  digitalWrite(led10, nivel >= 10);
-  digitalWrite(led30, nivel >= 30);
-  digitalWrite(led50, nivel >= 50);
-  digitalWrite(led70, nivel >= 70);
-  digitalWrite(led90, nivel >= 90);
+  // Controle da bomba e válvula
+  if (nivelAtual = 10) {
+    bombaLigada = true;
+  }
+  
+  if (nivelAtual <10) {
+    bombaLigada = false;
 
-  // Alternância de telas do LCD (2 segundos)
-  if (millis() - tempoAnterior > 2000) {
+  if (nivelAtual >= 90) {
+    bombaLigada = false;
+  }
+
+  // Aplicar estado
+  if (bombaLigada) {
+    digitalWrite(bomba, HIGH);
+    valvula.write(90); // válvula aberta
+  } else {
+    digitalWrite(bomba, LOW);
+    valvula.write(0); // válvula fechada
+  }
+
+  // LCD
+  if (millis() - tempoTroca > 2000) { // troca a cada 2s
     tela++;
     if (tela > 1) tela = 0;
-    lcd.clear();
-    tempoAnterior = millis();
+    tempoTroca = millis();
   }
+
+  // ===== LCD SEM PISCAR =====
 
   if (tela == 0) {
+    // Tela 1: Nivel + Bomba
     lcd.setCursor(0, 0);
     lcd.print("Nivel: ");
-    lcd.print(nivel);
-    lcd.print("%");
+    lcd.print(nivelAtual);
+    lcd.print("%   "); // limpa sobra
+
     lcd.setCursor(0, 1);
     lcd.print("Bomba: ");
-    lcd.print(bombaLigada ? "Ligado" : "Desligado");
-  } else if (tela == 1) {
+    if (bombaLigada) {
+      lcd.print("Ligada   ");
+    } else {
+      lcd.print("Desligada");
+    }
+
+  } else {
+    // Tela 2: Consumo
     lcd.setCursor(0, 0);
-    lcd.print("Consumo total:");
+    lcd.print("Consumo:      ");
+
     lcd.setCursor(0, 1);
     lcd.print(consumo);
-    lcd.print(" L");
+    lcd.print(" L         ");
   }
 
-  // Salva na EEPROM a cada 5 segundos (se houver alteração)
-  if (millis() - tempoEEPROM > 5000) {
-    if (consumo != consumoSalvo) {
-      EEPROM.put(enderecoEEPROM, consumo);
-      consumoSalvo = consumo;
-    }
-    tempoEEPROM = millis();
-  }
-
-  // Monitor Serial
   Serial.print("Nivel: ");
-  Serial.print(nivel);
-  Serial.print("% | Consumo: ");
-  Serial.print(consumo);
-  Serial.print(" L | Bomba: ");
-  Serial.println(bombaLigada ? "Ligado" : "Desligado");
+  Serial.print(nivelAtual);
+  Serial.print("% | Bomba: ");
 
-  delay(300);
+  if (bombaLigada) {
+    Serial.print("Ligada");
+  } else {
+    Serial.print("Desligada");
+  }
+
+  // ===== CONSUMO NO SERIAL =====
+  Serial.print(" | Consumo Total: ");
+  Serial.print(consumo);
+  Serial.println(" L");
+
+  // Atualiza nível anterior
+  nivelAnterior = nivelAtual;
+
+  delay(500);
 }
