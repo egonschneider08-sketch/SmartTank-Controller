@@ -52,11 +52,3 @@ Para que o código compile corretamente na IDE do Arduino, instale a seguinte bi
 `LiquidCrystal_I2C` (Desenvolvida por Frank de Brabander).
 
 > Nota: As bibliotecas `Wire.h`, `Servo.h` e `EEPROM.h` já são nativas da IDE do Arduino e não precisam de instalação extra.
-
-> Abaixo o documento do nosso projeto:
-> https://docs.google.com/document/d/1Q6XIhtfZkwjTDEEClQcKSbj5uyEiY-mbtTDbjimzwjo/edit?tab=t.0
-> Planilha com demonstração dos Leds:
-> https://docs.google.com/spreadsheets/d/1Q4JesG1pSvlLeFXvyTmZTEQdm1HRiI7gE1BreHbQSAw/edit?gid=0#gid=0
-> Projeto feito no tinkerCad:
->[ Circuit design Smart Tank Controller - Tinkercad](https://www.tinkercad.com/things/aOSASlgKeOb-smart-tank-controller?sharecode=J1NOqEuJYcmGkO0mGVyyh3R0DJzHFR3COpcidwo80JU)
-
